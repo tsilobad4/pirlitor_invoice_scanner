@@ -63,3 +63,5 @@ def append_missing_months(filepath):
 
     wb.save("test_invoice_costing_UPDATED.xlsx")
     wb.close()
+
+append_missing_months("test_invoice_costing.xlsx")
