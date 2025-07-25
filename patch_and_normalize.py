@@ -6,7 +6,7 @@ MONTH_LABELS = ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG",
                 "SEP", "OCT", "NOV", "DEC"]
 months_to_add = ["SEP", "OCT", "NOV", "DEC"]
 TEMPLATE_ROW = 5
-REF = "test_invoice_costing.xlsx"  # Input file
+REF = "test_invoice_costing_1.xlsx"  # Input file
 OUT = "test_invoice_costing_ALL_FIXED.xlsx"  # Output file
 
 # Load workbook and worksheet
