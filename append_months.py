@@ -1,39 +1,43 @@
-import xlwings as xw
+from openpyxl import load_workbook, Workbook
 
-def strip_formulas_from_price_columns(filepath, output_file, max_tables=30):
-    wb = xw.Book(filepath)
-    ws = wb.sheets["Sorting by part number"]
-    data = ws.used_range.value
+# Constants
+SOURCE_FILE = "test_invoice_costing.xlsx"
+OUTPUT_FILE = "copied_values_only.xlsx"
+SHEET_NAME = "Sorting by part number"
+MAX_TABLES = 30
 
-    MONTHS = ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG",
-              "SEP", "OCT", "NOV", "DEC"]
+# Load source workbook twice — once to get static values
+wb_formulas = load_workbook(SOURCE_FILE)
+wb_values = load_workbook(SOURCE_FILE, data_only=True)
 
-    row = 0
-    tables_processed = 0
+ws_f = wb_formulas[SHEET_NAME]
+ws_v = wb_values[SHEET_NAME]
 
-    while row < len(data) and tables_processed < max_tables:
-        row_data = data[row]
-        if isinstance(row_data, list) and "PART NUMBER" in row_data:
-            tables_processed += 1
-            start_row = row
-            # Scan for month rows
-            for r in range(start_row + 3, start_row + 20):  # rough window
-                if r >= len(data):
-                    break
-                month_val = data[r][0]
-                if isinstance(month_val, str) and month_val.strip().upper() in MONTHS:
-                    # Get current values from Unit Price (col 5) and Amount (col 6)
-                    for col in [5, 6]:
-                        cell_val = data[r][col - 1]
-                        if cell_val is not None:
-                            ws.cells(r + 1, col).value = cell_val  # xlwings is 1-indexed
-            row += 15  # skip ahead assuming ~15 row blocks
-        else:
-            row += 1
+# Create new workbook for the output
+wb_out = Workbook()
+ws_out = wb_out.active
+ws_out.title = "Copied Tables"
 
-    wb.save(output_file)
-    wb.close()
-    print(f"✅ Formulas stripped from first {max_tables} tables. Saved as '{output_file}'.")
+out_row = 1
+table_count = 0
+row = 1
 
-# Example usage:
-strip_formulas_from_price_columns("test_invoice_costing.xlsx", "test_invoice_costing_STRIPPED30.xlsx", max_tables=30)
+while row <= ws_v.max_row and table_count < MAX_TABLES:
+    if ws_v.cell(row, 2).value == "PART NUMBER":
+        table_count += 1
+
+        # Copy 1 header row + 1 spacer + 1 column header + up to 12 month rows
+        for i in range(row, row + 16):
+            for col in range(1, ws_v.max_column + 1):
+                val = ws_v.cell(i, col).value
+                ws_out.cell(out_row, col).value = val
+            out_row += 1
+
+        out_row += 1  # Leave a gap between tables
+        row += 16     # Move to next part table
+    else:
+        row += 1
+
+# Save the clean version
+wb_out.save(OUTPUT_FILE)
+print(f"✅ Copied first {table_count} tables to '{OUTPUT_FILE}' (no formulas)")
