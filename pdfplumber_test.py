@@ -13,6 +13,11 @@ def normalize_part_number(part):
 
 from copy import copy
 
+# Use exactly the labels you show in the sheet:
+MONTH_LABELS = ["JAN","FEB","MARCH","APRIL","MAY","JUNE","JUL","AUG","SEP","OCT","NOV","DEC"]
+# A quick map from month‐number → label for lookups:
+MONTH_MAP = {i+1: m for i, m in enumerate(MONTH_LABELS)}
+
 # Stuff to make the row formatting work
 def copy_row_format(ws, source_row, target_row):
     for col in range(1, ws.max_column + 1):
@@ -59,15 +64,17 @@ with pdfplumber.open("test_invoice.pdf") as pdf:
                     if any(keyword in line.lower() for keyword in ["subtotal", "hst", "total", "terms", "overdue"]):
                         continue  # Skip summary lines
                
-                #print (line)
+                # print (line)
                 tokens = line.split()
-                
+                #print (tokens)
+
                 try:
                     amount = tokens[-2] + " " + tokens[-1]          # Last two tokens
                     unit_price = tokens[-4] + " " + tokens[-3]      # Handles dollar amount and lot price
                     quantity = tokens [-8]
                     part_number = " ".join(tokens[3:-8])              # Anything between token 3 and 8th last
                     
+                    #print (part_number)
 
                     part_entries.append({
                         "date": invoice_date,
@@ -84,7 +91,7 @@ with pdfplumber.open("test_invoice.pdf") as pdf:
 #------------------------------------------------------------------
 
 # Load in the workbook (Excel file) and find all part tables starting rows
-wb = load_workbook("test_invoice_costing.xlsx")
+wb = load_workbook("test_invoice_costing_FINAL.xlsx")
 
 # Select the specific worksheet we want to work with 
 ws = wb["Sorting by part number"]
@@ -125,7 +132,7 @@ for entry in part_entries:
 
     #if the part is not already in the excel, we must add a new table
     if start_row is None:
-        ## print(f"🆕 Creating new table for part {part_number}")
+        print(f"🆕 Creating new table for part {part_number}")
         new_table_start_row = ws.max_row + 3        # Leave two empty rows before new table
 
         # Copy PART NUMBER row
@@ -149,18 +156,20 @@ for entry in part_entries:
             ws.cell(row = new_table_start_row, column = col).value = header_val
         new_table_start_row += 1
 
-        # Copy and create rows for months JAN to AUG
-        for month in ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG"]:
+        # Copy and create rows for months JAN to DEC
+        for month in ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG",
+                      "SEP", "OCT", "NOV", "DEC"]:
             ws.insert_rows(new_table_start_row)
             copy_row_format(ws, TEMPLATE_ROW_MONTH, new_table_start_row)
             ws.cell(row=new_table_start_row, column=1).value = month
             new_table_start_row += 1
 
-        # Update the start_row to where this table now begins
-        start_row = new_table_start_row - 9                ## 1 PART HEADER + 1 EMPTY + 1 COLUMN + 8 MONTHS = 11 rows inserted
+        # Update start_row: 1 (header) + 1 (spacer) + 1 (col headers) + 12 (months) = 15 rows
+        start_row = new_table_start_row - 15
 
     target_row = None
-    month_str = datetime.strptime(entry["date"], "%m.%d.%Y").strftime("%b").upper()
+    month_num = datetime.strptime(entry["date"], "%m.%d.%Y").month
+    month_str = MONTH_MAP[month_num]
     
     current_row = start_row + 2
     insert_row = None               # where we will eventually right the data
@@ -171,7 +180,7 @@ for entry in part_entries:
         col_a_val = ws.cell(row = current_row, column = 1).value
         col_b_val = ws.cell(row = current_row, column = 2).value
 
-        # print(f"Row {current_row} | Col A: {col_a_val} | Col B: {col_b_val}")  # DEBUG LINE
+        #print(f"Row {current_row} | Col A: {col_a_val} | Col B: {col_b_val}")  # DEBUG LINE
 
         # Detect next part block, stop looking further
         if isinstance(col_b_val, str) and col_b_val.strip().upper() == "PART NUMBER":
@@ -192,7 +201,7 @@ for entry in part_entries:
                     next_col_b = ws.cell(row = search_row, column = 2).value
 
                     # Stop if we hit a new month or next part table
-                    if isinstance(next_col_a, str) and next_col_a.strip().upper() in ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]:
+                    if isinstance(next_col_a, str) and next_col_a.strip().upper() in MONTH_LABELS:
                         # Insert a blank row before this
                         ws.insert_rows(search_row)
                         copy_row_format(ws, search_row - 1, search_row)
