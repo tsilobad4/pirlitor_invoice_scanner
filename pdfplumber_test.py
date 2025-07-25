@@ -91,7 +91,7 @@ with pdfplumber.open("test_invoice.pdf") as pdf:
 #------------------------------------------------------------------
 
 # Load in the workbook (Excel file) and find all part tables starting rows
-wb = load_workbook("test_invoice_costing.xlsx")
+wb = load_workbook("test_invoice_costing_FINAL.xlsx")
 
 # Select the specific worksheet we want to work with 
 ws = wb["Sorting by part number"]
