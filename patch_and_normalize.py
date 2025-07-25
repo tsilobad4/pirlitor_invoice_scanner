@@ -4,7 +4,7 @@ from copy import copy
 # Constants
 MONTH_LABELS = ["JAN","FEB","MARCH","APRIL","MAY","JUNE","JUL","AUG","SEP","OCT","NOV","DEC"]
 months_to_add = ["SEP","OCT","NOV","DEC"]
-REF = "test_invoice_costing_UPDATED.xlsx"
+REF = "test_invoice_costing_1.xlsx"
 OUT = "test_invoice_costing_FINAL_INSERT_ONLY.xlsx"
 
 # Load workbook and worksheet
