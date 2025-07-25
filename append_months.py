@@ -13,7 +13,7 @@ def copy_tables_with_formatting(source_path, output_path, max_tables=30):
     out_row = 1
     table_count = 0
 
-    data = ws.range("A1").expand().value  # Get all values
+    data = ws.used_range.value
     while row < len(data) and table_count < max_tables:
         row_data = data[row]
         if isinstance(row_data, list) and "PART NUMBER" in row_data:
