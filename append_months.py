@@ -1,67 +1,39 @@
 import xlwings as xw
 
-# Constants
-MONTHS = ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
-
-def append_missing_months(filepath):
+def strip_formulas_from_price_columns(filepath, output_file, max_tables=30):
     wb = xw.Book(filepath)
     ws = wb.sheets["Sorting by part number"]
+    data = ws.used_range.value
 
-    used_range = ws.used_range
-    values = used_range.value
+    MONTHS = ["JAN", "FEB", "MARCH", "APRIL", "MAY", "JUNE", "JUL", "AUG",
+              "SEP", "OCT", "NOV", "DEC"]
 
     row = 0
-    while row < len(values):
-        row_data = values[row]
+    tables_processed = 0
+
+    while row < len(data) and tables_processed < max_tables:
+        row_data = data[row]
         if isinstance(row_data, list) and "PART NUMBER" in row_data:
-            part_number = row_data[row_data.index("PART NUMBER") + 1]
+            tables_processed += 1
             start_row = row
-            month_rows = {}
-
-            # Scan forward to collect month rows
-            for r in range(start_row + 3, start_row + 20):  # Safe window to capture months
-                if r >= len(values):
+            # Scan for month rows
+            for r in range(start_row + 3, start_row + 20):  # rough window
+                if r >= len(data):
                     break
-                cell_val = values[r][0]
-                if isinstance(cell_val, str):
-                    clean_val = cell_val.strip().upper()
-                    if clean_val in MONTHS:
-                        month_rows[clean_val] = r + 1  # Excel is 1-indexed
-
-            missing_months = [m for m in MONTHS if m not in month_rows]
-
-            if missing_months:
-                print(f"Inserting missing months for part: {part_number}")
-                # Insert below the last existing month
-                reference_month = max(month_rows.values()) if month_rows else start_row + 3
-                insert_index = reference_month + 1
-
-                # Copy format from AUG if exists, else skip formatting
-                template_row = month_rows.get("AUG", None)
-
-                for m in missing_months:
-                    ws.api.Rows(insert_index).Insert()
-                    ws.range(f"A{insert_index}").value = m
-
-                    if template_row:
-                        for col in range(1, ws.used_range.last_cell.column + 1):
-                            src = ws.cells(template_row, col)
-                            tgt = ws.cells(insert_index, col)
-                            tgt.api.Font.Bold = src.api.Font.Bold
-                            tgt.api.Font.Name = src.api.Font.Name
-                            tgt.api.Font.Size = src.api.Font.Size
-                            tgt.color = src.color
-                            tgt.number_format = src.number_format
-
-                    insert_index += 1
-
-                row = insert_index
-            else:
-                row += 15  # Skip to next block if nothing missing
+                month_val = data[r][0]
+                if isinstance(month_val, str) and month_val.strip().upper() in MONTHS:
+                    # Get current values from Unit Price (col 5) and Amount (col 6)
+                    for col in [5, 6]:
+                        cell_val = data[r][col - 1]
+                        if cell_val is not None:
+                            ws.cells(r + 1, col).value = cell_val  # xlwings is 1-indexed
+            row += 15  # skip ahead assuming ~15 row blocks
         else:
             row += 1
 
-    wb.save("test_invoice_costing_UPDATED.xlsx")
+    wb.save(output_file)
     wb.close()
+    print(f"✅ Formulas stripped from first {max_tables} tables. Saved as '{output_file}'.")
 
-append_missing_months("test_invoice_costing.xlsx")
+# Example usage:
+strip_formulas_from_price_columns("test_invoice_costing.xlsx", "test_invoice_costing_STRIPPED30.xlsx", max_tables=30)
