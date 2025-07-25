@@ -2,7 +2,7 @@ from openpyxl import load_workbook
 from copy import copy
 
 # 1) Load the “correct‑height but missing‑months” file
-REF = "test_invoice_costing_UPDATED.xlsx"
+REF = "test_invoice_costing.xlsx"
 wb = load_workbook(REF)
 ws = wb["Sorting by part number"]
 
