@@ -1,43 +1,39 @@
-from openpyxl import load_workbook, Workbook
+import xlwings as xw
 
-# Constants
-SOURCE_FILE = "test_invoice_costing.xlsx"
-OUTPUT_FILE = "copied_values_only.xlsx"
-SHEET_NAME = "Sorting by part number"
-MAX_TABLES = 30
+def copy_tables_with_formatting(source_path, output_path, max_tables=30):
+    app = xw.App(visible=False)
+    wb = app.books.open(source_path)
+    ws = wb.sheets["Sorting by part number"]
 
-# Load source workbook twice — once to get static values
-wb_formulas = load_workbook(SOURCE_FILE)
-wb_values = load_workbook(SOURCE_FILE, data_only=True)
+    wb_out = xw.Book()  # New blank workbook
+    ws_out = wb_out.sheets[0]
+    ws_out.name = "Copied Tables"
 
-ws_f = wb_formulas[SHEET_NAME]
-ws_v = wb_values[SHEET_NAME]
+    row = 0
+    out_row = 1
+    table_count = 0
 
-# Create new workbook for the output
-wb_out = Workbook()
-ws_out = wb_out.active
-ws_out.title = "Copied Tables"
+    data = ws.range("A1").expand().value  # Get all values
+    while row < len(data) and table_count < max_tables:
+        row_data = data[row]
+        if isinstance(row_data, list) and "PART NUMBER" in row_data:
+            table_count += 1
+            # Copy 16 rows for this table
+            for i in range(row, row + 16):
+                src_range = ws.range(f"A{i+1}:H{i+1}")
+                tgt_range = ws_out.range(f"A{out_row}:H{out_row}")
+                src_range.copy(tgt_range)
+                out_row += 1
+            out_row += 2  # extra space between tables
+            row += 16
+        else:
+            row += 1
 
-out_row = 1
-table_count = 0
-row = 1
+    wb_out.save(output_path)
+    wb_out.close()
+    wb.close()
+    app.quit()
+    print(f"✅ Finished copying {table_count} tables to '{output_path}'")
 
-while row <= ws_v.max_row and table_count < MAX_TABLES:
-    if ws_v.cell(row, 2).value == "PART NUMBER":
-        table_count += 1
-
-        # Copy 1 header row + 1 spacer + 1 column header + up to 12 month rows
-        for i in range(row, row + 16):
-            for col in range(1, ws_v.max_column + 1):
-                val = ws_v.cell(i, col).value
-                ws_out.cell(out_row, col).value = val
-            out_row += 1
-
-        out_row += 1  # Leave a gap between tables
-        row += 16     # Move to next part table
-    else:
-        row += 1
-
-# Save the clean version
-wb_out.save(OUTPUT_FILE)
-print(f"✅ Copied first {table_count} tables to '{OUTPUT_FILE}' (no formulas)")
+# Call the function
+copy_tables_with_formatting("test_invoice_costing.xlsx", "formatted_tables_only.xlsx", max_tables=30)
