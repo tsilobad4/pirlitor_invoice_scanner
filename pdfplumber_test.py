@@ -91,6 +91,7 @@ with pdfplumber.open("test_invoice.pdf") as pdf:
 #------------------------------------------------------------------
 
 # Load in the workbook (Excel file) and find all part tables starting rows
+#test_invoice_costing_UPDATED.xlsx
 wb = load_workbook("test_invoice_costing_UPDATED.xlsx")
 
 # Select the specific worksheet we want to work with 
@@ -209,6 +210,7 @@ for entry in part_entries:
                         break
                     elif not next_col_b:             # If we find an empty row we can use
                         insert_row = search_row
+                        copy_row_format(ws, search_row - 1, search_row)
                         break
                     search_row += 1
             break                                    # Stop looking after we found our month block
