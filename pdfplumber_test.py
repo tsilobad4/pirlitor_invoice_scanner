@@ -4,6 +4,7 @@ from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from copy import copy
+import os
 
 #normalizing the hyphens
 def normalize_part_number(part):
@@ -34,60 +35,70 @@ def copy_row_format(ws, source_row, target_row):
 
 part_entries = []           #  Empty list to hold extracted part data pulled from the PDF
 
-with pdfplumber.open("test_invoice.pdf") as pdf:
-    for i, page in enumerate(pdf.pages):
-        # print(f"\n--- Page {i + 1} ---\n")
+pdf_folder = "invoices" # folder with all of the invoice pdfs
 
-        #Breaking the block of text into  a list of lines splitting at every line break
-        text = page.extract_text()
-        lines = text.split('\n')
-        #pattern = r"(?:Lot Price\s*)?\$\s?\d+\.\d{2}"  # Match "$ 5.50" or "Lot Price $ 150.00", just a pattern we will later be referencing
-        pattern = r"(?:Lot Price\s*)?\$\s?[\d,]+\.\d{2}"
+for filename in os.listdir(pdf_folder):
+    if filename.lower().endswith(".pdf"):
+        pdf_path = os.path.join(pdf_folder, filename)
+        print(f"📄 Reading {pdf_path}")
 
 
-        # getting the invoice date (same for each page)
-        invoice_date = None
-        for line in lines:
-            if line.startswith("Date:"):
-                raw_date = line.replace("Date:", "").strip()
-                parsed_date = datetime.strptime(raw_date, "%b/%d/%Y")  # e.g. Jun/07/2024
-                invoice_date = parsed_date.strftime("%m.%d.%Y")        # → 06.07.2024
-                break
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                for i, page in enumerate(pdf.pages):
+                    # print(f"\n--- Page {i + 1} ---\n")
 
-        # print(f"Invoice Date: {invoice_date}")
+                    #Breaking the block of text into  a list of lines splitting at every line break
+                    text = page.extract_text()
+                    lines = text.split('\n')
+                    #pattern = r"(?:Lot Price\s*)?\$\s?\d+\.\d{2}"  # Match "$ 5.50" or "Lot Price $ 150.00", just a pattern we will later be referencing
+                    pattern = r"(?:Lot Price\s*)?\$\s?[\d,]+\.\d{2}"
 
-        #Printing the lines that contain price info
-        for line in lines: 
-            
-            if re.search(pattern, line):
-                if re.search(pattern, line):
-                    if any(keyword in line.lower() for keyword in ["subtotal", "hst", "total", "terms", "overdue"]):
-                        continue  # Skip summary lines
-               
-                # print (line)
-                tokens = line.split()
-                #print (tokens)
 
-                try:
-                    amount = tokens[-2] + " " + tokens[-1]          # Last two tokens
-                    unit_price = tokens[-4] + " " + tokens[-3]      # Handles dollar amount and lot price
-                    quantity = tokens [-8]
-                    part_number = " ".join(tokens[3:-8])              # Anything between token 3 and 8th last
-                    
-                    #print (part_number)
+                    # getting the invoice date (same for each page)
+                    invoice_date = None
+                    for line in lines:
+                        if line.startswith("Date:"):
+                            raw_date = line.replace("Date:", "").strip()
+                            parsed_date = datetime.strptime(raw_date, "%b/%d/%Y")  # e.g. Jun/07/2024
+                            invoice_date = parsed_date.strftime("%m.%d.%Y")        # → 06.07.2024
+                            break
 
-                    part_entries.append({
-                        "date": invoice_date,
-                        "part": part_number,
-                        "qty": quantity,
-                        "unit_price": unit_price,
-                        "amount": amount
+                    # print(f"Invoice Date: {invoice_date}")
 
-                    })
+                    #Printing the lines that contain price info
+                    for line in lines: 
+                        
+                        if re.search(pattern, line):
+                            if re.search(pattern, line):
+                                if any(keyword in line.lower() for keyword in ["subtotal", "hst", "total", "terms", "overdue"]):
+                                    continue  # Skip summary lines
+                        
+                            # print (line)
+                            tokens = line.split()
+                            #print (tokens)
 
-                except IndexError:
-                    print("Skipped line due to unexpected format:", line)
+                            try:
+                                amount = tokens[-2] + " " + tokens[-1]          # Last two tokens
+                                unit_price = tokens[-4] + " " + tokens[-3]      # Handles dollar amount and lot price
+                                quantity = tokens [-8]
+                                part_number = " ".join(tokens[3:-8])              # Anything between token 3 and 8th last
+                                
+                                #print (part_number)
 
+                                part_entries.append({
+                                    "date": invoice_date,
+                                    "part": part_number,
+                                    "qty": quantity,
+                                    "unit_price": unit_price,
+                                    "amount": amount
+
+                                })
+
+                            except IndexError:
+                                print("Skipped line due to unexpected format:", line)
+        except Exception as e:
+            print(f"❌ Error reading {filename}: {e}")
 #------------------------------------------------------------------
 
 # Load in the workbook (Excel file) and find all part tables starting rows
@@ -209,8 +220,9 @@ for entry in part_entries:
                         insert_row = search_row
                         break
                     elif not next_col_b:             # If we find an empty row we can use
-                        insert_row = search_row
+                        ws.insert_rows(search_row)
                         copy_row_format(ws, search_row - 1, search_row)
+                        insert_row = search_row
                         break
                     search_row += 1
             break                                    # Stop looking after we found our month block
