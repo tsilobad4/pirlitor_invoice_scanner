@@ -106,7 +106,7 @@ for filename in os.listdir(pdf_folder):
 
 # Load in the workbook (Excel file) and find all part tables starting rows
 #test_invoice_costing_UPDATED.xlsx
-wb = load_workbook("test_invoice_costing_UPDATED_test.xlsx")
+wb = load_workbook("UPDATED_Accurate Testing invoice costing breakdown.xlsx")
 
 # Select the specific worksheet we want to work with 
 ws = wb["Sorting by part number"]
@@ -268,5 +268,5 @@ for entry in part_entries:
         print(f"Couldn't insert entry for part {part_number} and month {month_str}")
 
 
-wb.save("test_invoice_costing_UPDATED.xlsx")
-print("Excel updated and saved as 'test_invoice_costing_UPDATED.xlsx'")
+wb.save("UPDATED_Accurate Testing invoice costing breakdown.xlsx")
+print("Excel updated and saved as 'UPDATED_Accurate Testing invoice costing breakdown.xlsx'")
