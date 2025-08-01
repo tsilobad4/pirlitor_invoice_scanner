@@ -267,6 +267,11 @@ for entry in part_entries:
     else: 
         print(f"Couldn't insert entry for part {part_number} and month {month_str}")
 
+# Final cleanup: fix any row height issues
+for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+    row_idx = row[0].row
+    if ws.row_dimensions[row_idx].height is None:
+        ws.row_dimensions[row_idx].height = 15
 
 wb.save("UPDATED_Accurate Testing invoice costing breakdown.xlsx")
 print("Excel updated and saved as 'UPDATED_Accurate Testing invoice costing breakdown.xlsx'")
