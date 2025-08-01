@@ -32,7 +32,10 @@ def copy_row_format(ws, source_row, target_row):
             target_cell.number_format = copy(source_cell.number_format)
             target_cell.protection = copy(source_cell.protection)
             target_cell.alignment = copy(source_cell.alignment)
-
+    
+    height = ws.row_dimensions[source_row].height
+    ws.row_dimensions[target_row].height = height if height is not None else 15
+   
 part_entries = []           #  Empty list to hold extracted part data pulled from the PDF
 
 pdf_folder = "invoices" # folder with all of the invoice pdfs
@@ -103,7 +106,7 @@ for filename in os.listdir(pdf_folder):
 
 # Load in the workbook (Excel file) and find all part tables starting rows
 #test_invoice_costing_UPDATED.xlsx
-wb = load_workbook("test_invoice_costing_UPDATED.xlsx")
+wb = load_workbook("test_invoice_costing_UPDATED_test.xlsx")
 
 # Select the specific worksheet we want to work with 
 ws = wb["Sorting by part number"]
@@ -124,8 +127,10 @@ for row in ws.iter_rows(min_row = 1, max_row = ws.max_row):
             break
 
         if TEMPLATE_ROW_PART_HEADER:                         # Once we find first valid part table stop scanning further
+            # print(f"[DEBUG] TEMPLATE_ROW_COLUMN_HEADERS = {TEMPLATE_ROW_COLUMN_HEADERS}, "
+            #     f"height = {ws.row_dimensions[TEMPLATE_ROW_COLUMN_HEADERS].height!r}")
+       
             break
-
 
 #--------------------------------------------------------------------
 
@@ -162,6 +167,11 @@ for entry in part_entries:
         # Copy column header row
         ws.insert_rows(new_table_start_row)
         copy_row_format(ws, TEMPLATE_ROW_COLUMN_HEADERS, new_table_start_row)
+
+        # DEBUG: Check if height was applied properly
+        # print(f"[DEBUG] Just copied header format from row {TEMPLATE_ROW_COLUMN_HEADERS} (height: {ws.row_dimensions[TEMPLATE_ROW_COLUMN_HEADERS].height}) "
+        # f"→ to row {new_table_start_row} (new height: {ws.row_dimensions[new_table_start_row].height})")
+
         # Manually copy values for each header cell
         for col in range(1,8):
             header_val = ws.cell(row = TEMPLATE_ROW_COLUMN_HEADERS, column = col).value
@@ -234,7 +244,7 @@ for entry in part_entries:
     if insert_row:
         normalized_part = normalize_part_number(entry["part"])
         print(f"✅ Inserting at row {insert_row} for part '{normalized_part}' in month {month_str}")
-        print(f"Inserting at row {insert_row}:")
+        # print(f"Inserting at row {insert_row}:")
         print(f"  Date: {entry['date']}")
         print(f"  Part: {normalize_part_number(entry['part'])}")
         print(f"  Qty: {entry['qty']}")
